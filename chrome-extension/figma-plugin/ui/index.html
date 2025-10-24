@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      background: #ffffff;
+      color: #000000;
+      padding: 16px;
+      width: 400px;
+      min-height: 500px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    .info {
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #6b7280;
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status.idle {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .status.loading {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4f46e5;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #e5e7eb;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .checkbox-item:hover {
+      background: #f9fafb;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #6366f1;
+    }
+
+    .checkbox-item label {
+      cursor: pointer;
+      font-size: 11px;
+      flex: 1;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .stat {
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #6366f1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #6366f1;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border: 2px dashed #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .file-label:hover {
+      border-color: #6366f1;
+      background: #f9fafb;
+      color: #6366f1;
+    }
+
+    .file-name {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #6b7280;
+      text-align: center;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <div class="icon">W→F</div>
+    Web to Figma
+  </h1>
+
+  <div class="section">
+    <div class="info">
+      Import web pages as pixel-perfect, editable Figma designs with Auto Layout, components, and design systems.
+    </div>
+
+    <div id="status-idle" class="status idle">
+      <span>📋</span>
+      <span>Ready to import. Load a JSON file or paste from clipboard.</span>
+    </div>
+
+    <div id="status-loading" class="status loading hidden">
+      <div class="spinner"></div>
+      <div>
+        <div id="loading-message">Processing...</div>
+        <div class="progress">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-success" class="status success hidden">
+      <span>✓</span>
+      <span id="success-message">Import complete!</span>
+    </div>
+
+    <div id="status-error" class="status error hidden">
+      <span>⚠</span>
+      <span id="error-message">Import failed</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Import Options</div>
+    <div class="options">
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-main-frame" checked>
+          <label for="opt-main-frame">Main page frame</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-variants-frame" checked>
+          <label for="opt-variants-frame">Interactive variants frame</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-components-frame" checked>
+          <label for="opt-components-frame">Components library</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-design-system" checked>
+          <label for="opt-design-system">Design system page</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-auto-layout" checked>
+          <label for="opt-auto-layout">Apply Auto Layout</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="opt-create-styles" checked>
+          <label for="opt-create-styles">Create color & text styles</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <input type="file" id="file-input" class="file-input" accept=".json">
+    <label for="file-input" class="file-label">
+      <span>📁</span>
+      <span>Choose JSON File</span>
+    </label>
+    <div id="file-name" class="file-name hidden"></div>
+
+    <button id="paste-btn" class="btn btn-secondary">
+      📋 Paste from Clipboard
+    </button>
+
+    <button id="import-btn" class="btn btn-primary" disabled>
+      Import to Figma
+    </button>
+  </div>
+
+  <div id="stats-section" class="section hidden">
+    <div class="section-title">Import Statistics</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-elements">0</div>
+        <div class="stat-label">Elements</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-components">0</div>
+        <div class="stat-label">Components</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-frames">0</div>
+        <div class="stat-label">Frames</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-styles">0</div>
+        <div class="stat-label">Styles</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+</body>
+</html>

@@ -1,39 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "Web to Figma - Pixel Perfect Converter",
+  "name": "Web to Figma Capture",
   "version": "1.0.0",
-  "description": "Convert any web page to editable Figma components with pixel-perfect accuracy",
+  "description": "Capture web pages and send to Figma",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "webRequest"
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
-  "background": {
-    "service_worker": "dist/background.js"
-  },
   "action": {
-    "default_popup": "dist/popup/popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["dist/content-script.js"],
-      "run_at": "document_idle",
-      "all_frames": false
-    }
-  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [],
   "web_accessible_resources": [
     {
-      "resources": ["dist/injected-script.js"],
+      "resources": ["injected-script.js"],
       "matches": ["<all_urls>"]
     }
   ],

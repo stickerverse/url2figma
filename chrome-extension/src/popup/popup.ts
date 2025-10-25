@@ -1,323 +1,219 @@
-import { WebToFigmaSchema, CaptureOptions, ExtensionMessage } from '../types/schema';
+let capturedData: any = null;
 
-class PopupController {
-  private captureBtn: HTMLButtonElement;
-  private copyJsonBtn: HTMLButtonElement;
-  private downloadJsonBtn: HTMLButtonElement;
-  private sendToFigmaBtn: HTMLButtonElement;
-  private resetBtn: HTMLButtonElement;
+const captureBtn = document.getElementById('capture-btn') as HTMLButtonElement;
+const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
+const figmaBtn = document.getElementById('figma-btn') as HTMLButtonElement;
+const statusEl = document.getElementById('status') as HTMLDivElement;
+const screenshotImg = document.getElementById('screenshot') as HTMLImageElement;
+const screenshotContainer = document.getElementById('screenshot-container') as HTMLDivElement;
+const statsEl = document.getElementById('stats') as HTMLDivElement;
+const actionsEl = document.getElementById('actions') as HTMLDivElement;
+const statElements = document.getElementById('stat-elements') as HTMLSpanElement;
+const handoffStatusEl = document.getElementById('handoff-status') as HTMLDivElement;
+const previewCard = document.getElementById('preview-card') as HTMLDivElement;
+const previewTitleEl = document.getElementById('preview-title') as HTMLSpanElement;
+const previewUrlEl = document.getElementById('preview-url') as HTMLSpanElement;
+const previewTimestampEl = document.getElementById('preview-timestamp') as HTMLSpanElement;
+const openPreviewBtn = document.getElementById('open-preview-btn') as HTMLButtonElement;
+
+console.log('🎨 Popup loaded');
+
+captureBtn.addEventListener('click', async () => {
+  console.log('🔵 Capture button clicked');
   
-  private capturedData: WebToFigmaSchema | null = null;
-  private startTime: number = 0;
-
-  constructor() {
-    this.captureBtn = document.getElementById('capture-btn') as HTMLButtonElement;
-    this.copyJsonBtn = document.getElementById('copy-json-btn') as HTMLButtonElement;
-    this.downloadJsonBtn = document.getElementById('download-json-btn') as HTMLButtonElement;
-    this.sendToFigmaBtn = document.getElementById('send-to-figma-btn') as HTMLButtonElement;
-    this.resetBtn = document.getElementById('reset-btn') as HTMLButtonElement;
-
-    this.initEventListeners();
-    this.loadCurrentPageInfo();
-  }
-
-  private initEventListeners(): void {
-    this.captureBtn.addEventListener('click', () => this.startCapture());
-    this.copyJsonBtn.addEventListener('click', () => this.copyJSON());
-    this.downloadJsonBtn.addEventListener('click', () => this.downloadJSON());
-    this.sendToFigmaBtn.addEventListener('click', () => this.sendToFigma());
-    this.resetBtn.addEventListener('click', () => this.reset());
-
-    chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
-      this.handleMessage(message);
-    });
-  }
-
-  private async loadCurrentPageInfo(): Promise<void> {
+  captureBtn.disabled = true;
+  statusEl.textContent = '🔄 Capturing...';
+  handoffStatusEl?.classList.add('hidden');
+  previewCard?.classList.add('hidden');
+  screenshotContainer.classList.add('hidden');
+  previewUrlEl.textContent = '';
+  previewTimestampEl.textContent = '';
+  openPreviewBtn.disabled = true;
+  
+  try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      (document.getElementById('debug-url') as HTMLElement).textContent = tab.url || '';
-      (document.getElementById('debug-title') as HTMLElement).textContent = tab.title || '';
-    }
-  }
-
-  private async startCapture(): Promise<void> {
-    this.startTime = Date.now();
-    this.showStatus('capturing');
-    this.captureBtn.disabled = true;
-
-    const options = this.getCaptureOptions();
-
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (!tab.id) {
-        throw new Error('No active tab found');
-      }
-
-      await this.injectContentScript(tab.id);
-
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'START_CAPTURE',
-        data: { options }
-      });
-
-    } catch (error) {
-      this.showError(error instanceof Error ? error.message : 'Unknown error');
-      this.captureBtn.disabled = false;
-    }
-  }
-
-  private async injectContentScript(tabId: number): Promise<void> {
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['dist/content-script.js']
-      });
-    } catch (error) {
-      console.log('Content script already injected or injection failed:', error);
-    }
-  }
-
-  private getCaptureOptions(): CaptureOptions {
-    const viewports = [];
+    console.log('📍 Active tab:', tab.id, tab.url);
     
-    if ((document.getElementById('viewport-mobile') as HTMLInputElement).checked) {
-      viewports.push({ name: 'Mobile', width: 375, height: 667 });
-    }
-    if ((document.getElementById('viewport-tablet') as HTMLInputElement).checked) {
-      viewports.push({ name: 'Tablet', width: 768, height: 1024 });
-    }
-    if ((document.getElementById('viewport-desktop') as HTMLInputElement).checked) {
-      viewports.push({ name: 'Desktop', width: 1440, height: 900 });
+    if (!tab.id) {
+      throw new Error('No active tab');
     }
 
-    return {
-      captureHoverStates: (document.getElementById('capture-hover') as HTMLInputElement).checked,
-      captureFocusStates: (document.getElementById('capture-focus') as HTMLInputElement).checked,
-      detectComponents: (document.getElementById('detect-components') as HTMLInputElement).checked,
-      extractSVGs: (document.getElementById('extract-svgs') as HTMLInputElement).checked,
-      captureDepth: (document.getElementById('capture-depth') as HTMLSelectElement).value as any,
-      viewports,
-      createVariantsFrame: (document.getElementById('create-variants-frame') as HTMLInputElement).checked,
-      pixelPerfectMode: true
-    };
-  }
-
-  private handleMessage(message: ExtensionMessage): void {
-    switch (message.type) {
-      case 'PROGRESS_UPDATE':
-        this.updateProgress(message.data);
-        break;
-      
-      case 'CAPTURE_COMPLETE':
-        this.handleCaptureComplete(message.data);
-        break;
-      
-      case 'CAPTURE_ERROR':
-        this.showError(message.error || 'Unknown error');
-        this.captureBtn.disabled = false;
-        break;
-    }
-  }
-
-  private updateProgress(progress: any): void {
-    const progressText = document.getElementById('capture-progress') as HTMLElement;
-    const progressFill = document.getElementById('progress-fill') as HTMLElement;
-    
-    progressText.textContent = progress.message;
-    const percentage = (progress.current / progress.total) * 100;
-    progressFill.style.width = `${percentage}%`;
-  }
-
-  private async handleCaptureComplete(data: WebToFigmaSchema): Promise<void> {
-    this.capturedData = data;
-    const processingTime = Date.now() - this.startTime;
-
-    await this.processWithYoga(data);
-
-    this.showStatus('success');
-    
-    const stats = this.calculateStats(data);
-    (document.getElementById('success-stats') as HTMLElement).textContent = 
-      `${stats.elements} elements, ${stats.components} components`;
-
-    this.displayStats(stats);
-
-    (document.getElementById('debug-viewport') as HTMLElement).textContent = 
-      `${data.metadata.viewport.width}x${data.metadata.viewport.height}`;
-    (document.getElementById('debug-time') as HTMLElement).textContent = 
-      `${(processingTime / 1000).toFixed(2)}s`;
-    (document.getElementById('debug-size') as HTMLElement).textContent = 
-      this.formatBytes(JSON.stringify(data).length);
-
-    this.showActionButtons();
-    this.captureBtn.disabled = false;
-  }
-
-  private async processWithYoga(data: WebToFigmaSchema): Promise<void> {
-    const serverEndpoint = (document.getElementById('server-endpoint') as HTMLInputElement).value;
-    
-    if (!serverEndpoint) {
-      console.warn('No server endpoint configured, skipping Yoga processing');
-      return;
+    if (isRestrictedUrl(tab.url)) {
+      throw new Error('Cannot capture internal browser pages. Open a regular website instead.');
     }
 
-    try {
-      const response = await fetch(serverEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
-
-      const processedData = await response.json();
-      
-      if (processedData.ok && processedData.tree) {
-        this.capturedData = {
-          ...data,
-          tree: processedData.tree,
-          yogaLayout: processedData.yogaLayout
-        };
-      }
-    } catch (error) {
-      console.warn('Yoga processing failed, using original data:', error);
-    }
-  }
-
-  private calculateStats(data: WebToFigmaSchema): any {
-    let elements = 0;
-    let images = 0;
-    let svgs = 0;
-
-    const countElements = (node: any) => {
-      elements++;
-      if (node.type === 'IMAGE') images++;
-      if (node.type === 'VECTOR') svgs++;
-      if (node.children) {
-        node.children.forEach(countElements);
-      }
-    };
-
-    countElements(data.tree);
-
-    return {
-      elements,
-      components: Object.keys(data.components?.components || {}).length,
-      images: Object.keys(data.assets.images).length,
-      svgs: Object.keys(data.assets.svgs).length
-    };
-  }
-
-  private displayStats(stats: any): void {
-    (document.getElementById('stat-elements') as HTMLElement).textContent = stats.elements;
-    (document.getElementById('stat-components') as HTMLElement).textContent = stats.components;
-    (document.getElementById('stat-images') as HTMLElement).textContent = stats.images;
-    (document.getElementById('stat-svgs') as HTMLElement).textContent = stats.svgs;
-    
-    document.getElementById('results-section')?.classList.remove('hidden');
-  }
-
-  private showActionButtons(): void {
-    this.copyJsonBtn.classList.remove('hidden');
-    this.downloadJsonBtn.classList.remove('hidden');
-    this.sendToFigmaBtn.classList.remove('hidden');
-    this.resetBtn.classList.remove('hidden');
-  }
-
-  private async copyJSON(): Promise<void> {
-    if (!this.capturedData) return;
-
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(this.capturedData, null, 2));
-      this.showNotification('✓ JSON copied to clipboard!');
-    } catch (error) {
-      this.showNotification('✗ Failed to copy JSON', true);
-    }
-  }
-
-  private downloadJSON(): void {
-    if (!this.capturedData) return;
-
-    const blob = new Blob([JSON.stringify(this.capturedData, null, 2)], { 
-      type: 'application/json' 
+    // Inject content script
+    console.log('💉 Injecting content script...');
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content-script.js']
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `web-to-figma-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    console.log('✅ Content script injected');
 
-    this.showNotification('✓ JSON file downloaded!');
-  }
+    // Wait a bit for script to load
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-  private async sendToFigma(): Promise<void> {
-    if (!this.capturedData) return;
-
-    await chrome.storage.local.set({ 
-      'figmaImportData': this.capturedData,
-      'figmaImportTimestamp': Date.now()
+    // Send capture message
+    console.log('📤 Sending START_CAPTURE message...');
+    chrome.tabs.sendMessage(tab.id, { type: 'START_CAPTURE' }, (response) => {
+      console.log('📥 Response from content script:', response);
+      if (chrome.runtime.lastError) {
+        console.error('❌ Message error:', chrome.runtime.lastError);
+        statusEl.textContent = '❌ Failed: ' + chrome.runtime.lastError.message;
+        captureBtn.disabled = false;
+      }
     });
 
-    this.showNotification('✓ Data ready for Figma plugin!\nOpen your Figma plugin to import.');
+  } catch (error) {
+    console.error('❌ Capture error:', error);
+    statusEl.textContent =
+      error instanceof Error ? `❌ Failed: ${error.message}` : '❌ Failed to capture';
+    captureBtn.disabled = false;
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('📨 Popup received message:', message.type);
+
+  if (message.type === 'HANDOFF_ERROR') {
+    if (handoffStatusEl) {
+      handoffStatusEl.textContent = `⚠️ Handoff server unreachable: ${message.message || 'start npm run handoff-server'}`;
+      handoffStatusEl.className = 'handoff-status error';
+      handoffStatusEl.classList.remove('hidden');
+    }
+    statusEl.textContent = '⚠️ Server offline, continuing with local capture...';
+    return;
+  }
+  
+  if (message.type === 'CAPTURE_COMPLETE') {
+    capturedData = message.data;
+    
+    if (message.handoffDelivered) {
+      statusEl.textContent = '✅ Capture delivered to Figma plugin!';
+      if (handoffStatusEl) {
+        handoffStatusEl.textContent = '🚀 Sent to handoff server for automatic import.';
+        handoffStatusEl.className = 'handoff-status success';
+        handoffStatusEl.classList.remove('hidden');
+      }
+    } else {
+      statusEl.textContent = '✅ Capture complete. Open Figma to import manually.';
+      if (handoffStatusEl) {
+        handoffStatusEl.textContent = '⚠️ Handoff server not reached. Use manual import from this popup.';
+        handoffStatusEl.className = 'handoff-status error';
+        handoffStatusEl.classList.remove('hidden');
+      }
+    }
+    captureBtn.disabled = false;
+    
+    // Show screenshot
+    if (capturedData.screenshot) {
+      screenshotImg.src = capturedData.screenshot;
+      screenshotContainer.classList.remove('hidden');
+      previewCard.classList.remove('hidden');
+    }
+
+    updatePreviewMeta(capturedData);
+    
+    // Show stats
+    const count = countElements(capturedData.tree);
+    statElements.textContent = count.toString();
+    statsEl.classList.remove('hidden');
+    
+    // Show actions
+    actionsEl.classList.remove('hidden');
+  }
+  
+  sendResponse({ received: true });
+});
+
+downloadBtn.addEventListener('click', () => {
+  console.log('💾 Download clicked');
+  if (!capturedData) return;
+  
+  const blob = new Blob([JSON.stringify(capturedData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `capture-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+figmaBtn.addEventListener('click', async () => {
+  console.log('🚀 Send to Figma clicked');
+  if (!capturedData) return;
+  
+  await chrome.storage.local.set({
+    figmaImportData: capturedData,
+    figmaAutoImport: true,
+    figmaImportTimestamp: Date.now()
+  });
+  
+  statusEl.textContent = '✅ Sent to Figma! Open the plugin.';
+  console.log('✅ Data sent to Figma storage');
+});
+
+openPreviewBtn.addEventListener('click', () => {
+  if (!capturedData) return;
+
+  const targetUrl = capturedData.metadata?.url;
+  if (targetUrl) {
+    chrome.tabs.create({ url: targetUrl });
+    return;
   }
 
-  private reset(): void {
-    this.capturedData = null;
-    this.showStatus('ready');
-    this.copyJsonBtn.classList.add('hidden');
-    this.downloadJsonBtn.classList.add('hidden');
-    this.sendToFigmaBtn.classList.add('hidden');
-    this.resetBtn.classList.add('hidden');
-    document.getElementById('results-section')?.classList.add('hidden');
+  if (capturedData.screenshot) {
+    const viewerUrl = capturedData.screenshot;
+    chrome.tabs.create({ url: viewerUrl });
+  }
+});
+
+function countElements(node: any): number {
+  if (!node) return 0;
+  let count = 1;
+  for (const child of node.children || []) {
+    count += countElements(child);
+  }
+  return count;
+}
+
+function updatePreviewMeta(data: any) {
+  const title = data?.metadata?.title || 'Preview ready';
+  const url = data?.metadata?.url || '';
+  const timestamp = data?.metadata?.timestamp;
+  const canOpen = Boolean(url || data?.screenshot);
+  openPreviewBtn.disabled = !canOpen;
+
+  previewTitleEl.textContent = title.length > 60 ? `${title.slice(0, 57)}…` : title;
+
+  if (url) {
+    previewUrlEl.textContent = url;
+    previewUrlEl.title = url;
+  } else {
+    previewUrlEl.textContent = '';
+    previewUrlEl.title = '';
   }
 
-  private showStatus(status: 'ready' | 'capturing' | 'success' | 'error'): void {
-    ['ready', 'capturing', 'success', 'error'].forEach(s => {
-      document.getElementById(`status-${s}`)?.classList.add('hidden');
-    });
-    document.getElementById(`status-${status}`)?.classList.remove('hidden');
-  }
-
-  private showError(message: string): void {
-    this.showStatus('error');
-    (document.getElementById('error-message') as HTMLElement).textContent = message;
-  }
-
-  private showNotification(message: string, isError = false): void {
-    const notification = document.createElement('div');
-    notification.textContent = message;
-    notification.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 20px;
-      background: ${isError ? '#ef4444' : '#10b981'};
-      color: white;
-      border-radius: 6px;
-      font-size: 13px;
-      z-index: 10000;
-      animation: slideUp 0.3s ease;
-    `;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-      notification.remove();
-    }, 3000);
-  }
-
-  private formatBytes(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  if (timestamp) {
+    try {
+      const formatted = new Date(timestamp).toLocaleString();
+      previewTimestampEl.textContent = formatted;
+    } catch {
+      previewTimestampEl.textContent = '';
+    }
+  } else {
+    previewTimestampEl.textContent = '';
   }
 }
 
-new PopupController();
+function isRestrictedUrl(url: string | undefined): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.startsWith('chrome://') ||
+    lower.startsWith('edge://') ||
+    lower.startsWith('about:') ||
+    lower.startsWith('devtools://') ||
+    lower.startsWith('chrome-extension://')
+  );
+}

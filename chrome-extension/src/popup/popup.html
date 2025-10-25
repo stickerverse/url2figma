@@ -1,261 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web to Figma</title>
+  <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="2" width="20" height="20" rx="2" stroke="currentColor" stroke-width="2"/>
-          <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        Web to Figma
-      </h1>
-      <div class="version">v1.0.0</div>
-    </header>
-
-    <main>
-      <div id="status-section" class="section">
-        <div id="status-ready" class="status-card">
-          <div class="status-icon">✓</div>
-          <div class="status-text">
-            <div class="status-title">Ready to Capture</div>
-            <div class="status-subtitle">Configure options and click capture</div>
-          </div>
-        </div>
-
-        <div id="status-capturing" class="status-card hidden">
-          <div class="status-icon spinner">⟳</div>
-          <div class="status-text">
-            <div class="status-title">Capturing Page</div>
-            <div class="status-subtitle" id="capture-progress">Analyzing DOM...</div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progress-fill"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="status-success" class="status-card success hidden">
-          <div class="status-icon">🎉</div>
-          <div class="status-text">
-            <div class="status-title">Capture Complete!</div>
-            <div class="status-subtitle" id="success-stats"></div>
-          </div>
-        </div>
-
-        <div id="status-error" class="status-card error hidden">
-          <div class="status-icon">⚠️</div>
-          <div class="status-text">
-            <div class="status-title">Capture Failed</div>
-            <div class="status-subtitle" id="error-message"></div>
-          </div>
-        </div>
+    <h1>🎨 Web to Figma</h1>
+    
+    <div id="status" class="status">Ready to capture</div>
+    <div id="handoff-status" class="handoff-status hidden"></div>
+    
+    <div id="preview-card" class="preview hidden">
+      <div class="preview-header">
+        <span class="preview-title" id="preview-title">Preview ready</span>
+        <button id="open-preview-btn" class="preview-open-btn" title="Open source page">↗</button>
       </div>
-
-      <div id="options-section" class="section">
-        <h2>Capture Options</h2>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Viewports</span>
-            <span class="option-hint">Select screen sizes to capture</span>
-          </label>
-          <div class="checkbox-group">
-            <label class="checkbox-item">
-              <input type="checkbox" id="viewport-mobile" checked>
-              <span>📱 Mobile (375px)</span>
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="viewport-tablet">
-              <span>📱 Tablet (768px)</span>
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="viewport-desktop" checked>
-              <span>💻 Desktop (1440px)</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Interactive States</span>
-            <span class="option-hint">Capture hover and focus variations</span>
-          </label>
-          <div class="checkbox-group">
-            <label class="checkbox-item">
-              <input type="checkbox" id="capture-hover" checked>
-              <span>🖱️ Hover States</span>
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="capture-focus">
-              <span>⌨️ Focus States</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Variants Frame</span>
-            <span class="option-hint">Create separate frame with all interactive states</span>
-          </label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="create-variants-frame" checked>
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Generate variants frame</span>
-          </label>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Component Detection</span>
-            <span class="option-hint">Identify reusable patterns</span>
-          </label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="detect-components" checked>
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Auto-detect components</span>
-          </label>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Vector Assets</span>
-            <span class="option-hint">Extract SVGs as editable vectors</span>
-          </label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="extract-svgs" checked>
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Preserve SVG vectors</span>
-          </label>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Capture Depth</span>
-            <span class="option-hint">How deep to analyze the page</span>
-          </label>
-          <select id="capture-depth" class="select-input">
-            <option value="shallow">Shallow (Visible area only)</option>
-            <option value="medium" selected>Medium (Scroll + load dynamic)</option>
-            <option value="deep">Deep (Full page + all states)</option>
-          </select>
-        </div>
-
-        <div class="option-group">
-          <label class="option-label">
-            <span>Server Endpoint</span>
-            <span class="option-hint">Your Yoga processing server</span>
-          </label>
-          <input 
-            type="text" 
-            id="server-endpoint" 
-            class="text-input" 
-            placeholder="http://localhost:8787/render-yoga"
-            value="http://localhost:8787/render-yoga"
-          >
-        </div>
+      <div id="screenshot-container" class="preview-body">
+        <img id="screenshot" alt="Screenshot preview">
       </div>
-
-      <div class="action-section">
-        <button id="capture-btn" class="btn btn-primary">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
-            <circle cx="8" cy="8" r="2" fill="currentColor"/>
-          </svg>
-          Capture Page
-        </button>
-
-        <button id="copy-json-btn" class="btn btn-secondary hidden">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="4" y="4" width="8" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M6 4V3a1 1 0 011-1h6a1 1 0 011 1v8a1 1 0 01-1 1h-1" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-          Copy JSON
-        </button>
-
-        <button id="download-json-btn" class="btn btn-secondary hidden">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2v8m0 0l3-3m-3 3L5 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M2 10v3a1 1 0 001 1h10a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-          Download JSON
-        </button>
-
-        <button id="send-to-figma-btn" class="btn btn-accent hidden">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M5 2h6v4h-6z" fill="currentColor" opacity="0.4"/>
-            <path d="M5 6h6v4h-6z" fill="currentColor" opacity="0.7"/>
-            <circle cx="8" cy="12" r="2" fill="currentColor"/>
-          </svg>
-          Send to Figma Plugin
-        </button>
-
-        <button id="reset-btn" class="btn btn-ghost hidden">
-          Reset
-        </button>
+      <div class="preview-meta">
+        <span id="preview-url" class="preview-url"></span>
+        <span id="preview-timestamp" class="preview-timestamp"></span>
       </div>
-
-      <div id="results-section" class="section hidden">
-        <h2>Capture Results</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value" id="stat-elements">0</div>
-            <div class="stat-label">Elements</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-components">0</div>
-            <div class="stat-label">Components</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-images">0</div>
-            <div class="stat-label">Images</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-svgs">0</div>
-            <div class="stat-label">SVGs</div>
-          </div>
-        </div>
+    </div>
+    
+    <div class="stats hidden" id="stats">
+      <div class="stat">
+        <span id="stat-elements">0</span> elements
       </div>
-
-      <details class="section debug-section">
-        <summary>Debug Info</summary>
-        <div class="debug-content">
-          <div class="debug-item">
-            <strong>Page URL:</strong>
-            <code id="debug-url"></code>
-          </div>
-          <div class="debug-item">
-            <strong>Page Title:</strong>
-            <code id="debug-title"></code>
-          </div>
-          <div class="debug-item">
-            <strong>Viewport:</strong>
-            <code id="debug-viewport"></code>
-          </div>
-          <div class="debug-item">
-            <strong>Processing Time:</strong>
-            <code id="debug-time"></code>
-          </div>
-          <div class="debug-item">
-            <strong>JSON Size:</strong>
-            <code id="debug-size"></code>
-          </div>
-        </div>
-      </details>
-    </main>
-
-    <footer>
-      <a href="https://github.com/yourusername/web-to-figma" target="_blank">Documentation</a>
-      <span>·</span>
-      <a href="#" id="report-issue">Report Issue</a>
-    </footer>
+    </div>
+    
+    <button id="capture-btn" class="btn-primary">📸 Capture Page</button>
+    
+    <div class="actions hidden" id="actions">
+      <button id="download-btn" class="btn-secondary">💾 Download JSON</button>
+      <button id="figma-btn" class="btn-success">🚀 Send to Figma</button>
+    </div>
   </div>
-
   <script src="popup.js"></script>
 </body>
 </html>

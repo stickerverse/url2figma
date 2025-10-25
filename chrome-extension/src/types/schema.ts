@@ -4,45 +4,30 @@ export interface WebToFigmaSchema {
   tree: ElementNode;
   assets: AssetRegistry;
   styles: StyleRegistry;
-  components: ComponentRegistry;
-  variants: VariantsRegistry;
+  components?: ComponentRegistry;
   yogaLayout?: YogaLayoutData;
-}
-
-export interface VariantsRegistry {
-  elements: Record<string, ElementVariants>;
-}
-
-export interface ElementVariants {
-  elementId: string;
-  baseElement: ElementNode;
-  states: {
-    default: ElementNode;
-    hover?: ElementNode;
-    focus?: ElementNode;
-    active?: ElementNode;
-    disabled?: ElementNode;
-  };
-  position: {
-    x: number;
-    y: number;
-  };
-  selector: string;
+  designTokens?: DesignTokenRegistry;
+  screenshot?: string;
 }
 
 export interface PageMetadata {
   url: string;
   title: string;
+  timestamp: string;
   viewport: {
     width: number;
     height: number;
     devicePixelRatio: number;
   };
-  timestamp: string;
   fonts: FontDefinition[];
   breakpoint?: 'mobile' | 'tablet' | 'desktop';
-  captureOptions: CaptureOptions;
-  screenshot?: string;
+  captureOptions?: CaptureOptions;
+  extractionSummary?: {
+    scrollComplete: boolean;
+    tokensExtracted: boolean;
+    totalElements: number;
+    visibleElements: number;
+  };
 }
 
 export interface CaptureOptions {
@@ -52,8 +37,6 @@ export interface CaptureOptions {
   extractSVGs: boolean;
   captureDepth: 'shallow' | 'medium' | 'deep';
   viewports: ViewportConfig[];
-  createVariantsFrame: boolean;
-  pixelPerfectMode: boolean;
 }
 
 export interface ViewportConfig {
@@ -66,7 +49,7 @@ export interface ElementNode {
   id: string;
   type: 'FRAME' | 'TEXT' | 'RECTANGLE' | 'VECTOR' | 'IMAGE' | 'COMPONENT' | 'INSTANCE';
   name: string;
-  
+
   layout: {
     x: number;
     y: number;
@@ -74,7 +57,16 @@ export interface ElementNode {
     height: number;
     rotation?: number;
   };
-  
+
+  absoluteLayout?: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  };
+
   autoLayout?: {
     layoutMode: 'HORIZONTAL' | 'VERTICAL' | 'NONE';
     primaryAxisAlignItems: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN';
@@ -87,51 +79,101 @@ export interface ElementNode {
     layoutGrow?: number;
     layoutAlign?: 'STRETCH' | 'INHERIT';
   };
-  
+
   fills?: Fill[];
   strokes?: Stroke[];
+  strokeWeight?: number;
+  strokeAlign?: 'INSIDE' | 'OUTSIDE' | 'CENTER';
   effects?: Effect[];
-  cornerRadius?: CornerRadius;
+  cornerRadius?: CornerRadius | number;
   opacity?: number;
   blendMode?: BlendMode;
-  
+  mixBlendMode?: BlendMode;
+
   characters?: string;
   textStyle?: TextStyle;
-  
+
   vectorData?: {
     svgPath: string;
     svgCode: string;
     fills: Fill[];
   };
-  
+
   imageHash?: string;
-  
+
   isComponent?: boolean;
   componentId?: string;
   componentKey?: string;
   variants?: VariantData[];
-  hasInteractiveStates?: boolean;
-  
+
   pseudoElements?: {
     before?: ElementNode;
     after?: ElementNode;
   };
-  
+
   htmlTag: string;
   cssClasses: string[];
   cssId?: string;
   dataAttributes?: Record<string, string>;
   ariaLabel?: string;
-  cssSelector?: string;
-  
+  cssCustomProperties?: Record<string, string>;
+
   children: ElementNode[];
-  
+
   constraints?: {
     horizontal: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE';
     vertical: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE';
   };
-  
+
   interactions?: InteractionData[];
+
+  position?: 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky';
+  display?: string;
+  visibility?: 'visible' | 'hidden' | 'collapse';
+  pointerEvents?: string;
+  overflow?: {
+    horizontal: 'visible' | 'hidden' | 'scroll' | 'auto' | 'clip';
+    vertical: 'visible' | 'hidden' | 'scroll' | 'auto' | 'clip';
+  };
+  zIndex?: number;
+  order?: number;
+  isStackingContext?: boolean;
+
+  transform?: TransformData;
+  transformOrigin?: { x: number; y: number; z?: number };
+  perspective?: number;
+
+  filters?: FilterData[];
+  backdropFilters?: FilterData[];
+  clipPath?: ClipPathData;
+  mask?: MaskData;
+
+  backgrounds?: BackgroundLayer[];
+  outline?: OutlineData;
+
+  scrollData?: ScrollData;
+  contentHash?: string;
+  componentSignature?: string;
+
+  inlineTextSegments?: InlineTextSegment[];
+}
+
+export interface InteractionData {
+  type: 'HOVER' | 'FOCUS' | 'ACTIVE' | 'CLICK';
+  targetId?: string;
+  description?: string;
+}
+
+export interface InlineTextSegment {
+  id: string;
+  characters: string;
+  textStyle: TextStyle;
+  layout: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export interface Fill {
@@ -179,6 +221,14 @@ export interface TextStyle {
   textAlignVertical: 'TOP' | 'CENTER' | 'BOTTOM';
   textCase?: 'ORIGINAL' | 'UPPER' | 'LOWER' | 'TITLE';
   textDecoration?: 'NONE' | 'UNDERLINE' | 'STRIKETHROUGH';
+  lineHeightPx?: number;
+  paragraphSpacing?: number;
+  paragraphIndent?: number;
+  fontStyle?: 'normal' | 'italic' | 'oblique';
+  textTransform?: string;
+  whiteSpace?: string;
+  listStyleType?: string;
+  listStylePosition?: string;
   fills: Fill[];
 }
 
@@ -199,6 +249,8 @@ export interface RGBA {
 export interface AssetRegistry {
   images: Record<string, ImageAsset>;
   svgs: Record<string, SVGAsset>;
+  fonts?: Record<string, FontDefinition>;
+  gradients?: Record<string, GradientAsset>;
 }
 
 export interface ImageAsset {
@@ -217,9 +269,16 @@ export interface SVGAsset {
   height: number;
 }
 
+export interface GradientAsset {
+  hash: string;
+  type: 'linear' | 'radial';
+  stops: GradientStop[];
+  transform: Transform2D;
+}
+
 export interface StyleRegistry {
   colors: Record<string, ColorStyle>;
-  textStyles: Record<string, TextStyleDefinition>;
+  textStyles: Record<string, TextStyle>;
   effects: Record<string, Effect[]>;
 }
 
@@ -230,22 +289,16 @@ export interface ColorStyle {
   usageCount: number;
 }
 
-export interface TextStyleDefinition extends TextStyle {
-  id: string;
-  name: string;
-  usageCount: number;
-}
-
 export interface ComponentRegistry {
-  components: Record<string, ComponentDefinition>;
+  definitions: Record<string, ComponentDefinition>;
 }
 
 export interface ComponentDefinition {
   id: string;
   name: string;
-  instances: string[];
-  baseNode: ElementNode;
-  variants?: VariantData[];
+  description?: string;
+  variantId?: string;
+  properties?: Record<string, any>;
 }
 
 export interface VariantData {
@@ -253,21 +306,30 @@ export interface VariantData {
   properties: Partial<ElementNode>;
 }
 
-export interface InteractionData {
-  trigger: 'ON_CLICK' | 'ON_HOVER' | 'ON_PRESS';
-  action: 'CHANGE_TO' | 'NAVIGATE';
-  destinationId?: string;
-  transition?: {
-    type: 'DISSOLVE' | 'SMART_ANIMATE' | 'MOVE_IN';
-    duration: number;
-    easing: string;
-  };
-}
-
 export interface YogaLayoutData {
   calculatedByYoga: boolean;
   layoutTree: any;
 }
+
+export type BlendMode =
+  | 'NORMAL'
+  | 'MULTIPLY'
+  | 'SCREEN'
+  | 'OVERLAY'
+  | 'DARKEN'
+  | 'LIGHTEN'
+  | 'COLOR_DODGE'
+  | 'COLOR_BURN'
+  | 'HARD_LIGHT'
+  | 'SOFT_LIGHT'
+  | 'DIFFERENCE'
+  | 'EXCLUSION'
+  | 'HUE'
+  | 'SATURATION'
+  | 'COLOR'
+  | 'LUMINOSITY';
+
+export type Transform2D = [[number, number, number], [number, number, number]];
 
 export interface FontDefinition {
   family: string;
@@ -276,18 +338,81 @@ export interface FontDefinition {
   url?: string;
 }
 
-export type BlendMode = 'NORMAL' | 'MULTIPLY' | 'SCREEN' | 'OVERLAY' | 'DARKEN' | 'LIGHTEN';
-export type Transform2D = [[number, number, number], [number, number, number]];
-
-export interface ExtensionMessage {
-  type: 'START_CAPTURE' | 'CAPTURE_COMPLETE' | 'CAPTURE_ERROR' | 'PROGRESS_UPDATE';
-  data?: any;
-  error?: string;
+export interface DesignTokenRegistry {
+  colors: Record<string, any>;
+  typography: Record<string, any>;
+  spacing: Record<string, any>;
+  shadows: Record<string, any>;
+  borderRadius: Record<string, any>;
 }
 
-export interface CaptureProgress {
-  stage: string;
-  current: number;
-  total: number;
-  message: string;
+export interface TransformData {
+  matrix: number[];
+  translate?: { x: number; y: number; z?: number };
+  scale?: { x: number; y: number; z?: number };
+  rotate?: { x: number; y: number; z: number; angle: number };
+  skew?: { x: number; y: number };
+}
+
+export interface FilterData {
+  type:
+    | 'blur'
+    | 'brightness'
+    | 'contrast'
+    | 'dropShadow'
+    | 'grayscale'
+    | 'hueRotate'
+    | 'invert'
+    | 'opacity'
+    | 'saturate'
+    | 'sepia';
+  value: number;
+  unit?: 'px' | '%' | 'deg';
+  color?: RGBA;
+  offset?: { x: number; y: number };
+}
+
+export interface ClipPathData {
+  type: 'circle' | 'ellipse' | 'inset' | 'polygon' | 'path' | 'url' | 'none';
+  value: string;
+}
+
+export interface MaskData {
+  type: 'alpha' | 'luminance' | 'url' | 'none';
+  value: string;
+}
+
+export interface BackgroundLayer {
+  type: 'color' | 'gradient' | 'image';
+  fill: Fill;
+  position?: { x: string; y: string };
+  size?: { width: string; height: string };
+  repeat?: string;
+  clip?: string;
+  origin?: string;
+  attachment?: string;
+}
+
+export interface OutlineData {
+  color: RGBA;
+  width: number;
+  style:
+    | 'solid'
+    | 'dashed'
+    | 'dotted'
+    | 'double'
+    | 'groove'
+    | 'ridge'
+    | 'inset'
+    | 'outset'
+    | 'none';
+}
+
+export interface ScrollData {
+  scrollWidth: number;
+  scrollHeight: number;
+  scrollTop: number;
+  scrollLeft: number;
+  overscrollBehaviorX?: string;
+  overscrollBehaviorY?: string;
 }

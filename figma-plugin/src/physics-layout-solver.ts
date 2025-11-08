@@ -262,16 +262,55 @@ export class PhysicsLayoutSolver {
    * Apply absolute positioning to a Figma node
    */
   private static applyAbsolutePositioning(node: SceneNode, nodeData: any): void {
-    if (nodeData.absoluteLayout) {
-      node.x = nodeData.absoluteLayout.left;
-      node.y = nodeData.absoluteLayout.top;
-      
-      if ('resize' in node) {
-        (node as any).resize(
-          Math.max(nodeData.absoluteLayout.width, 1),
-          Math.max(nodeData.absoluteLayout.height, 1)
-        );
+    if (!nodeData.absoluteLayout) {
+      return;
+    }
+
+    const { left, top, width, height } = nodeData.absoluteLayout;
+    const { x: localX, y: localY } = this.convertWorldToLocal(node, left, top);
+
+    node.x = localX;
+    node.y = localY;
+
+    if ('resize' in node) {
+      (node as any).resize(Math.max(width, 1), Math.max(height, 1));
+    }
+  }
+
+  private static convertWorldToLocal(node: SceneNode, worldX: number, worldY: number): { x: number; y: number } {
+    const parent = node.parent;
+    if (!parent || !('absoluteTransform' in parent)) {
+      return { x: worldX, y: worldY };
+    }
+
+    try {
+      const transform = (parent as SceneNode).absoluteTransform;
+      const a = transform[0][0];
+      const b = transform[0][1];
+      const c = transform[1][0];
+      const d = transform[1][1];
+      const tx = transform[0][2];
+      const ty = transform[1][2];
+
+      const det = a * d - b * c;
+      if (Math.abs(det) < 1e-6) {
+        return { x: worldX - tx, y: worldY - ty };
       }
+
+      const invA = d / det;
+      const invB = -b / det;
+      const invC = -c / det;
+      const invD = a / det;
+      const invTx = (b * ty - d * tx) / det;
+      const invTy = (c * tx - a * ty) / det;
+
+      const localX = invA * worldX + invB * worldY + invTx;
+      const localY = invC * worldX + invD * worldY + invTy;
+
+      return { x: localX, y: localY };
+    } catch (error) {
+      console.warn('Failed to convert world to local coordinates', error);
+      return { x: worldX, y: worldY };
     }
   }
   

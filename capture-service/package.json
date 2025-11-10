@@ -1,0 +1,41 @@
+{
+  "name": "@figmaconvert/capture-service",
+  "version": "1.0.0",
+  "description": "Cloud-based web page capture service for Figma conversion",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "worker": "tsx src/worker.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "bullmq": "^5.1.0",
+    "ioredis": "^5.3.2",
+    "playwright": "^1.40.1",
+    "playwright-core": "^1.40.1",
+    "@aws-sdk/client-s3": "^3.490.0",
+    "@aws-sdk/s3-request-presigner": "^3.490.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "dotenv": "^16.3.1",
+    "nanoid": "^5.0.4",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

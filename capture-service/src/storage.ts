@@ -3,13 +3,27 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import logger from './logger';
 import { AssetUploadResult } from './types';
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+let s3Client: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    
+    if (!accessKeyId || !secretAccessKey) {
+      throw new Error('AWS credentials not configured');
+    }
+    
+    s3Client = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+  }
+  return s3Client;
+}
 
 const BUCKET_NAME = process.env.S3_BUCKET || 'figma-capture-assets';
 const ASSET_EXPIRY_HOURS = parseInt(process.env.S3_ASSET_EXPIRY_HOURS || '24', 10);
@@ -19,7 +33,8 @@ const ASSET_EXPIRY_HOURS = parseInt(process.env.S3_ASSET_EXPIRY_HOURS || '24', 1
  */
 export async function checkStorageHealth(): Promise<boolean> {
   try {
-    await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));
+    const client = getS3Client();
+    await client.send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));
     return true;
   } catch (error) {
     logger.error({ error, bucket: BUCKET_NAME }, 'S3 bucket not accessible');
@@ -39,8 +54,10 @@ export async function uploadCaptureResult(
   const screenshotKey = screenshot ? `captures/${jobId}/screenshot.png` : undefined;
 
   try {
+    const client = getS3Client();
+    
     // Upload schema JSON
-    await s3Client.send(
+    await client.send(
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: schemaKey,
@@ -59,7 +76,7 @@ export async function uploadCaptureResult(
     if (screenshot && screenshotKey) {
       const screenshotBuffer = Buffer.from(screenshot.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 
-      await s3Client.send(
+      await client.send(
         new PutObjectCommand({
           Bucket: BUCKET_NAME,
           Key: screenshotKey,
@@ -79,7 +96,7 @@ export async function uploadCaptureResult(
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
     const schemaUrl = await getSignedUrl(
-      s3Client,
+      client,
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: schemaKey,
@@ -90,7 +107,7 @@ export async function uploadCaptureResult(
     let screenshotUrl: string | undefined;
     if (screenshotKey) {
       screenshotUrl = await getSignedUrl(
-        s3Client,
+        client,
         new PutObjectCommand({
           Bucket: BUCKET_NAME,
           Key: screenshotKey,

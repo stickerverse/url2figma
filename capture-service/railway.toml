@@ -11,13 +11,16 @@ restartPolicyMaxRetries = 10
 NODE_ENV = "production"
 PORT = "3000"
 
-# AWS S3 Configuration - Set these in Railway Variables UI
+# AWS S3 Configuration - Set these in Railway Variables UI AFTER deployment
 AWS_REGION = "us-east-1"
 S3_BUCKET = "figma-capture-assets"
 S3_ASSET_EXPIRY_HOURS = "24"
+# AWS_ACCESS_KEY_ID - Set this manually in Railway Variables tab
+# AWS_SECRET_ACCESS_KEY - Set this manually in Railway Variables tab
 
-# Security - Set these in Railway Variables UI
+# Security - Set these in Railway Variables UI AFTER deployment  
 API_KEY_REQUIRED = "true"
+# ALLOWED_API_KEYS - Set this manually in Railway Variables tab
 
 # Railway managed services (auto-populated)
 REDIS_HOST = "${{REDIS.PRIVATE_URL}}"

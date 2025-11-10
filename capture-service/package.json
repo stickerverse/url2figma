@@ -5,9 +5,11 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && npx playwright install chromium",
     "start": "node dist/server.js",
     "worker": "tsx src/worker.ts",
+    "railway:build": "npm run build",
+    "railway:start": "npm start",
     "test": "vitest"
   },
   "dependencies": {
